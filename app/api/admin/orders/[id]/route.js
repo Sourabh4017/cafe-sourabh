@@ -77,6 +77,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
+
 /* ================= UPDATE ORDER STATUS ================= */
 export async function PATCH(req, { params }) {
   try {
