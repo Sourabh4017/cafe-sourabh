@@ -95,19 +95,73 @@
 // }
 
 
+// import { NextResponse } from "next/server";
+// import prisma from "@/lib/prisma";
+// import jwt from "jsonwebtoken";
+
+// export async function GET(req) {
+//   try {
+//     const token = req.cookies.get("adminToken")?.value;
+//     if (!token) {
+//       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+//     }
+
+//     jwt.verify(token, process.env.JWT_SECRET);
+
+//     const totalOrders = await prisma.order.count();
+
+//     const totalSales = await prisma.order.aggregate({
+//       _sum: { total: true },
+//     });
+
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0);
+
+//     const todayOrders = await prisma.order.count({
+//       where: { createdAt: { gte: today } },
+//     });
+
+//     const statusCounts = await prisma.order.groupBy({
+//       by: ["status"],
+//       _count: true,
+//     });
+
+//     return NextResponse.json({
+//       totalOrders,
+//       todayOrders,
+//       totalSales: totalSales._sum.total || 0,
+//       statusCounts,
+//     });
+//   } catch (err) {
+//     return NextResponse.json(
+//       { message: "Analytics error" },
+//       { status: 401 }
+//     );
+//   }
+// }
+
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import jwt from "jsonwebtoken";
 
+export const dynamic = "force-dynamic"; 
+// 👆 VERY IMPORTANT for Vercel (prevents build-time execution)
+
 export async function GET(req) {
   try {
     const token = req.cookies.get("adminToken")?.value;
+
     if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     jwt.verify(token, process.env.JWT_SECRET);
 
+    // Database queries inside handler only
     const totalOrders = await prisma.order.count();
 
     const totalSales = await prisma.order.aggregate({
@@ -118,24 +172,34 @@ export async function GET(req) {
     today.setHours(0, 0, 0, 0);
 
     const todayOrders = await prisma.order.count({
-      where: { createdAt: { gte: today } },
+      where: {
+        createdAt: {
+          gte: today,
+        },
+      },
     });
 
     const statusCounts = await prisma.order.groupBy({
       by: ["status"],
-      _count: true,
+      _count: {
+        status: true,
+      },
     });
 
     return NextResponse.json({
       totalOrders,
       todayOrders,
-      totalSales: totalSales._sum.total || 0,
+      totalSales: totalSales._sum.total ?? 0,
       statusCounts,
     });
+
   } catch (err) {
+    console.error("Analytics API Error:", err);
+
     return NextResponse.json(
       { message: "Analytics error" },
-      { status: 401 }
+      { status: 500 }
     );
   }
 }
+
